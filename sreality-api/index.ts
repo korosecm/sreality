@@ -21,6 +21,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.get("/", async (req, res) => {
+  console.log("process.env: ", process.env);
+
   const jsonResponse = (responseObject, responseCode = 200) => {
     res.send(JSON.stringify(responseObject));
     console.log(
@@ -34,13 +36,20 @@ app.get("/", async (req, res) => {
 
   const client = new Client({
     host: process.env.PG_HOST,
-    port: process.env.PG_PORT,
+    port: Number(process.env.PG_PORT),
     user: process.env.PG_USER,
     password: process.env.PG_PASSWORD,
     database: process.env.PG_DATABASE,
     ssl: false,
   });
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (e) {
+    console.log("error client connect: ", e);
+    return res.status(500).send({
+      message: "This is an SQL error!",
+    });
+  }
 
   var pageSize = 20;
   var numberOfRows, numberOfPages;
@@ -48,33 +57,50 @@ app.get("/", async (req, res) => {
   var page = 1;
 
   var limit = numberPerPage;
-
-  const resTotal = await client.query(
-    `SELECT COUNT(*) AS total FROM apartments;`
-  );
-  numberOfRows = resTotal.rows[0].total;
-  numberOfPages = Math.ceil(numberOfRows / numberPerPage);
+  try {
+    const resTotal = await client.query(
+      `SELECT COUNT(*) AS total FROM apartments;`
+    );
+    numberOfRows = resTotal.rows[0].total;
+    numberOfPages = Math.ceil(numberOfRows / numberPerPage);
+  } catch (e) {
+    console.log("error in query SELECT COUNT(*) AS total FROM apartments: ", e);
+    return res.status(500).send({
+      message: "This is an SQL error!",
+    });
+  }
 
   if (req.query?.page) {
     page = req.query.page;
   }
   var offset = (page - 1) * numberPerPage;
 
-  const entries = await client.query(
-    `SELECT * FROM apartments LIMIT ${limit} OFFSET ${offset};`
-  );
-  const resObject = {
-    items: entries.rows,
-    pagination: {
-      total_pages: numberOfPages,
-      current: page,
-      numberPerPage: numberPerPage,
-      has_previous: page > 1,
-      has_next: page < numberOfPages,
-      last_page: Math.ceil(numberOfRows / pageSize),
-    },
-  };
-  jsonResponse(resObject);
+  try {
+    const entries = await client.query(
+      `SELECT * FROM apartments LIMIT ${limit} OFFSET ${offset};`
+    );
+
+    const resObject = {
+      items: entries.rows,
+      pagination: {
+        total_pages: numberOfPages,
+        current: page,
+        numberPerPage: numberPerPage,
+        has_previous: page > 1,
+        has_next: page < numberOfPages,
+        last_page: Math.ceil(numberOfRows / pageSize),
+      },
+    };
+    jsonResponse(resObject);
+  } catch (e) {
+    console.log(
+      "error in query SELECT * FROM apartments LIMIT ${limit} OFFSET ${offset}: ",
+      e
+    );
+    return res.status(500).send({
+      message: "This is an SQL error!",
+    });
+  }
 
   // res.send({ message: "Hello World!" });
 });

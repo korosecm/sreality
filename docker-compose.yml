@@ -1,0 +1,44 @@
+version: "3.4"
+
+services:
+  postgres:
+    image: postgres:latest
+    ports:
+      - "${PG_PORT}:${PG_PORT}"
+    volumes:
+      - ./data_dump.sql:/docker-entrypoint-initdb.d/data_dump.sql
+    # volumes:
+    #   - ~/db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_DB=${PG_DATABASE}
+    networks:
+      - public
+
+  api:
+    build:
+      dockerfile: ./backend.dockerfile
+    links:
+      - postgres
+    environment:
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_USER=${PG_USER}
+      - PG_DATABASE=${PG_DATABASE}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+    ports:
+      - 8080:8080
+    networks:
+      - public
+
+  app:
+    build:
+      dockerfile: ./frontend.dockerfile
+    ports:
+      - 3000:3000
+    networks:
+      - public
+
+networks:
+  public:
