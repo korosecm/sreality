@@ -5,8 +5,8 @@ const { Client } = require("pg");
 require("dotenv").config();
 const port = process.env.PORT || 8080;
 
+// Handle CORS
 const whitelist = ["http://localhost:3000"];
-
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || whitelist.indexOf(origin) !== -1) {
@@ -17,12 +17,10 @@ const corsOptions = {
   },
   credentials: true,
 };
-
 app.use(cors(corsOptions));
 
+// Handle request
 app.get("/", async (req, res) => {
-  console.log("process.env: ", process.env);
-
   const jsonResponse = (responseObject, responseCode = 200) => {
     res.send(JSON.stringify(responseObject));
     console.log(
@@ -34,6 +32,7 @@ app.get("/", async (req, res) => {
     );
   };
 
+  // Connect to db
   const client = new Client({
     host: process.env.PG_HOST,
     port: Number(process.env.PG_PORT),
@@ -47,15 +46,15 @@ app.get("/", async (req, res) => {
   } catch (e) {
     console.log("error client connect: ", e);
     return res.status(500).send({
-      message: "This is an SQL error!",
+      message: "This is an SQL connection error!",
     });
   }
 
+  // info for pagination
   var pageSize = 20;
   var numberOfRows, numberOfPages;
   var numberPerPage = 20;
   var page = 1;
-
   var limit = numberPerPage;
   try {
     const resTotal = await client.query(
@@ -70,16 +69,15 @@ app.get("/", async (req, res) => {
     });
   }
 
+  // Get page data
   if (req.query?.page) {
     page = req.query.page;
   }
   var offset = (page - 1) * numberPerPage;
-
   try {
     const entries = await client.query(
       `SELECT * FROM apartments LIMIT ${limit} OFFSET ${offset};`
     );
-
     const resObject = {
       items: entries.rows,
       pagination: {
@@ -91,6 +89,7 @@ app.get("/", async (req, res) => {
         last_page: Math.ceil(numberOfRows / pageSize),
       },
     };
+
     jsonResponse(resObject);
   } catch (e) {
     console.log(

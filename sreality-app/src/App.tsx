@@ -30,7 +30,10 @@ function App() {
         setPagination(data.pagination);
         setLoading(false);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err);
+        setLoading(false);
+      });
   }
 
   function rerenderButtons() {
@@ -67,13 +70,13 @@ function App() {
           SREALITY APARTMENTS
         </div>
 
-        <div className="w-[80dvw] min-h-[80dvh] bg-gray-light">
+        <div className="w-[80dvw] min-h-[75dvh] bg-gray-light">
           {loading ? (
             // Loading
-            <div className="w-full h-full flex justify-center items-center">
+            <div className="w-full h-full flex justify-center items-center pt-20">
               loading
             </div>
-          ) : (
+          ) : apartments.length ? (
             // Conent
             <div className="flex flex-wrap -mx-2 p-4 px-10">
               {apartments.map((apartment) => (
@@ -88,6 +91,11 @@ function App() {
                   />
                 </div>
               ))}
+            </div>
+          ) : (
+            // API error
+            <div className="w-full h-full flex justify-center items-center pt-20">
+              Failed to fetch data
             </div>
           )}
         </div>
